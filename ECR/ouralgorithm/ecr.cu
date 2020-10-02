@@ -106,6 +106,12 @@ int main(){
 
 		//for(int  j=0;j<arraySize;j++)
 		//	feature[j] = (float)features[j];
+		//time-start
+		cudaEvent_t start,stop;
+		float elapsedTime1 = 0.0;
+		cudaEventCreate(&start);
+		cudaEventCreate(&stop);
+		cudaEventRecord(start,0);
 		float * gpu_input;
 		float * gpu_kernel;
 		float * gpu_output;
@@ -126,12 +132,7 @@ int main(){
 		}
 		
 		
-		//time-start
-		cudaEvent_t start,stop;
-		float elapsedTime1 = 0.0;
-		cudaEventCreate(&start);
-		cudaEventCreate(&stop);
-		cudaEventRecord(start,0);
+	
 		
 		cudaStatus = cudaMemcpy(gpu_input,feature,arraySize*sizeof(float),cudaMemcpyHostToDevice);
 		if (cudaStatus != cudaSuccess) {
@@ -146,16 +147,10 @@ int main(){
 	
 		
 		//function-start
-		
+			
 		func_new<<<(i_h-k_h)/stride+1,(i_w-k_w)/stride+1>>>(gpu_input,gpu_kernel,gpu_output,i_w,i_h,k_w,k_h,stride,o_w,o_h);
 
-		//end-time
-		cudaEventRecord(stop, 0);
-		cudaEventSynchronize(stop);
-		cudaEventElapsedTime(&elapsedTime1, start, stop);
-		cout << elapsedTime1<< endl; //ms
-		cudaEventDestroy(start);
-		cudaEventDestroy(stop);
+		
 
 		float *result = new float[outSize];
 		cudaStatus = cudaMemcpy(result,gpu_output,outSize*sizeof(float),cudaMemcpyDeviceToHost);
@@ -179,6 +174,14 @@ int main(){
 			delete[] feature;
 			delete[] result;
 		}
+
+	//end-time
+	cudaEventRecord(stop, 0);
+	cudaEventSynchronize(stop);
+	cudaEventElapsedTime(&elapsedTime1, start, stop);
+	cout << elapsedTime1<< endl; //ms
+	cudaEventDestroy(start);
+	cudaEventDestroy(stop);
 	
 	}
 	

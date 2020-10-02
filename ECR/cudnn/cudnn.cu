@@ -21,8 +21,8 @@ int main() {
   // convolution
   const int pad_h = 0;
   const int pad_w = 0;
-  const int str_h = 3;
-  const int str_w = 3;
+  const int str_h = 1;
+  const int str_w = 1;
   const int dil_h = 1;
   const int dil_w = 1;
   
@@ -82,7 +82,11 @@ int main() {
 	int out_h;
 	int out_w;
   
-  
+      cudaEvent_t start,stop;
+      float elapsedTime1 = 0.0;
+      cudaEventCreate(&start);
+      cudaEventCreate(&stop);
+      cudaEventRecord(start,0);
 	cudnnHandle_t cudnn;
    (cudnnCreate(&cudnn));
   cudnnTensorDescriptor_t in_desc;
@@ -159,14 +163,10 @@ int main() {
   // perform
   float alpha = 1.f;
   float beta = 0.f;
-  cudaEvent_t start,stop;
-  float elapsedTime1 = 0.0;
-  cudaEventCreate(&start);
-  cudaEventCreate(&stop);
-  cudaEventRecord(start,0);
+ 
 	cudaMemcpy(in_data,feature,arraySize*sizeof(float),cudaMemcpyHostToDevice);
 	cudaMemcpy(filt_data,kernel,9*sizeof(float),cudaMemcpyHostToDevice);
-	
+      
        (cudnnConvolutionForward(
       cudnn,
       &alpha, in_desc, in_data, filt_desc, filt_data,
@@ -174,12 +174,7 @@ int main() {
       &beta, out_desc, out_data));
 
 
-	cudaEventRecord(stop, 0);
-	cudaEventSynchronize(stop);
-	cudaEventElapsedTime(&elapsedTime1, start, stop);
-	cout << elapsedTime1<< endl; //ms
-	cudaEventDestroy(start);
-	cudaEventDestroy(stop);
+	
 
   // finalizing
 	 (cudaFree(ws_data));
@@ -191,7 +186,14 @@ int main() {
 	 (cudaFree(in_data));
 	 (cudnnDestroyTensorDescriptor(in_desc));
 	 (cudnnDestroy(cudnn));
-  }
+  
+       cudaEventRecord(stop, 0);
+       cudaEventSynchronize(stop);
+       cudaEventElapsedTime(&elapsedTime1, start, stop);
+       cout << elapsedTime1<< endl; //ms
+       cudaEventDestroy(start);
+       cudaEventDestroy(stop);
+      }
   
   
   return 0;

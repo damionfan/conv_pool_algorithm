@@ -61,7 +61,7 @@ print(string)
 string = ''
 string = 'Speedup:|'
 for i in range(len(cudnn_time)):
-    string += str(cudnn_time[i]*100/ecr_time[i]*100)[:3]+'  '
+    string += str(cudnn_time[i]/ecr_time[i])[:3]+'  '
 
-string += str(sum(cudnn_time)*100/sum(ecr_time)*100)[:3]
+string += str(sum(cudnn_time)/sum(ecr_time))[:3]
 print(string)

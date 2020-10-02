@@ -72,29 +72,17 @@ for(int i=0;i<4995;i++){
     conv_feature>>data[len++];
   conv_feature.close();
 
+// filter
+const int filt_k = 1;
+const int filt_c = 1;
+const int filt_h = 3;
+const int filt_w = 3;
+
+
+
+float kernel[9] = { 1,0,1,0,1,0,1,0,0};
+float *filt_data;
   float *in_data;
-  CUDA_CALL(cudaMalloc(
-        &in_data, in_n * in_c * in_h * in_w * sizeof(float)));
-
-
-  // filter
-  const int filt_k = 1;
-  const int filt_c = 1;
-  const int filt_h = 3;
-  const int filt_w = 3;
-
-
-  cudnnFilterDescriptor_t filt_desc;
-  CUDNN_CALL(cudnnCreateFilterDescriptor(&filt_desc));
-  CUDNN_CALL(cudnnSetFilter4dDescriptor(
-        filt_desc, CUDNN_DATA_FLOAT, CUDNN_TENSOR_NCHW,
-        filt_k, filt_c, filt_h, filt_w));
-
-
-  float kernel[9] = { 1,0,1,0,1,0,1,0,0};
-  float *filt_data;
-  CUDA_CALL(cudaMalloc(
-      &filt_data, filt_k * filt_c * filt_h * filt_w * sizeof(float)));
 
 
 
@@ -105,6 +93,39 @@ for(int i=0;i<4995;i++){
   const int str_w = 1;
   const int dil_h = 1;
   const int dil_w = 1;
+ // output
+ int out_n;
+ int out_c;
+ int out_h;
+ int out_w;
+
+ float *out_data;
+
+ cudaEvent_t start, stop;
+ float elapsedTime1 = 0.0;
+ cudaEventCreate(&start);
+ cudaEventCreate(&stop);
+ cudaEventRecord(start,0);
+
+  CUDA_CALL(cudaMalloc(
+        &in_data, in_n * in_c * in_h * in_w * sizeof(float)));
+
+
+  
+
+
+  cudnnFilterDescriptor_t filt_desc;
+  CUDNN_CALL(cudnnCreateFilterDescriptor(&filt_desc));
+  CUDNN_CALL(cudnnSetFilter4dDescriptor(
+        filt_desc, CUDNN_DATA_FLOAT, CUDNN_TENSOR_NCHW,
+        filt_k, filt_c, filt_h, filt_w));
+
+
+  CUDA_CALL(cudaMalloc(
+      &filt_data, filt_k * filt_c * filt_h * filt_w * sizeof(float)));
+
+
+
 
   cudnnConvolutionDescriptor_t conv_desc;
   CUDNN_CALL(cudnnCreateConvolutionDescriptor(&conv_desc));
@@ -113,11 +134,7 @@ for(int i=0;i<4995;i++){
         pad_h, pad_w, str_h, str_w, dil_h, dil_w,
         CUDNN_CONVOLUTION, CUDNN_DATA_FLOAT));
 
-  // output
-  int out_n;
-  int out_c;
-  int out_h;
-  int out_w;
+ 
 
   CUDNN_CALL(cudnnGetConvolution2dForwardOutputDim(
         conv_desc, in_desc, filt_desc,
@@ -131,7 +148,7 @@ for(int i=0;i<4995;i++){
         out_desc, CUDNN_TENSOR_NCHW, CUDNN_DATA_FLOAT,
         out_n, out_c, out_h, out_w));
 
-  float *out_data;
+ 
   CUDA_CALL(cudaMalloc(
         &out_data, out_n * out_c * out_h * out_w * sizeof(float)));
 
@@ -158,11 +175,7 @@ for(int i=0;i<4995;i++){
   float alpha = 1.f;
   float beta = 0.f;
 
-cudaEvent_t start, stop;
-float elapsedTime1 = 0.0;
-cudaEventCreate(&start);
-cudaEventCreate(&stop);
-cudaEventRecord(start,0);
+
 
  cudaMemcpy(filt_data,kernel,filt_k * filt_c * filt_h * filt_w *sizeof(float),cudaMemcpyHostToDevice);
  cudaMemcpy(in_data,data,in_n * in_c * in_h * in_w *sizeof(float),cudaMemcpyHostToDevice);
@@ -180,11 +193,7 @@ cudaEventRecord(start,0);
         con_result, out_data,
         out_n * out_c * out_h * out_w * sizeof(float),
         cudaMemcpyDeviceToHost));
-cudaEventRecord(stop, 0);
-cudaEventSynchronize(stop);
-cudaEventElapsedTime(&elapsedTime1, start, stop);
-cudaEventDestroy(start);
-cudaEventDestroy(stop);
+
 
   // finalizing
   CUDA_CALL(cudaFree(ws_data));
@@ -239,11 +248,7 @@ cudaEventDestroy(stop);
   cudaMalloc(&gpu_out, (out_h-2 +1)*(out_h-2 +1)*sizeof(float));
     cudaMemset(out_data,0,(out_h-2 +1)*(out_h-2 +1)*sizeof(float));
     cudaMemset(out_data,0,(out_h-2 +1)*(out_h-2 +1)*sizeof(float));
-cudaEvent_t start1, stop1;
-float elapsedTime2 = 0.0;
-cudaEventCreate(&start1);
-cudaEventCreate(&stop1);
-cudaEventRecord(start1,0);
+
   cudaMemcpy(gpu_in,con_result,out_n * out_c * out_h * out_w *sizeof(float),cudaMemcpyHostToDevice);
 
 
@@ -256,12 +261,7 @@ cudaEventRecord(start1,0);
                                  &be,         //beta scaling factor
                                  out_p_desc,      //output tensor descriptor
                                  gpu_out);
-cudaEventRecord(stop1, 0);
-cudaEventSynchronize(stop1);
-cudaEventElapsedTime(&elapsedTime2, start1, stop1);
-cout<<elapsedTime1+elapsedTime2<<endl;
-cudaEventDestroy(stop1);
-cudaEventDestroy(start1);
+
 
 
   cudnnDestroyTensorDescriptor(in_p_desc);
@@ -273,7 +273,12 @@ cudaEventDestroy(start1);
   cudaFree(gpu_out);
 
   free(con_result);
-
+  cudaEventRecord(stop, 0);
+  cudaEventSynchronize(stop);
+  cudaEventElapsedTime(&elapsedTime1, start, stop);
+  cout<<elapsedTime1<<endl;
+  cudaEventDestroy(start);
+  cudaEventDestroy(stop);
   }
   return 0;
 }

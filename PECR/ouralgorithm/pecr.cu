@@ -110,7 +110,11 @@ for(int i=0;i<4995;i++){
 float * gpu_input;
 float * gpu_kernel;
 float * gpu_output;
-
+cudaEvent_t start, stop;
+			float elapsedTime1 = 0.0;
+			cudaEventCreate(&start);
+			cudaEventCreate(&stop);
+			cudaEventRecord(start,0);	
 cudaStatus = cudaMalloc((void**)&gpu_input,arraySize*sizeof(float));
 		if (cudaStatus != cudaSuccess) {
 		fprintf(stderr, "cudaMalloc failed!%s\n", cudaGetErrorString(cudaStatus));
@@ -129,11 +133,7 @@ cudaStatus = cudaMalloc((void**)&gpu_output,op*op*sizeof(float));
 								
 								
 								
-			cudaEvent_t start, stop;
-			float elapsedTime1 = 0.0;
-			cudaEventCreate(&start);
-			cudaEventCreate(&stop);
-			cudaEventRecord(start,0);							
+									
 cudaStatus = cudaMemcpy(gpu_input,feature,arraySize*sizeof(float),cudaMemcpyHostToDevice);
 		if (cudaStatus != cudaSuccess) {
 		fprintf(stderr, "cudaMemcpy failed!%s\n", cudaGetErrorString(cudaStatus));
@@ -150,13 +150,6 @@ float *result = (float*)malloc(op*op*sizeof(float));
 //function-start
 func_pecr<<<op,op>>>(gpu_input,gpu_kernel,i_w,i_h,k_w,k_h,1,1,p_w,p_h,gpu_output);
 
-//end-time
-cudaEventRecord(stop, 0);
-cudaEventSynchronize(stop);
-cudaEventElapsedTime(&elapsedTime1, start, stop);
-cout << elapsedTime1<< endl; //ms
-cudaEventDestroy(start);
-cudaEventDestroy(stop);
 
 
 
@@ -193,6 +186,13 @@ cudaStatus = cudaFree(gpu_input);
 
 		}
 
+//end-time
+cudaEventRecord(stop, 0);
+cudaEventSynchronize(stop);
+cudaEventElapsedTime(&elapsedTime1, start, stop);
+cout << elapsedTime1<< endl; //ms
+cudaEventDestroy(start);
+cudaEventDestroy(stop);
 
 }
 
