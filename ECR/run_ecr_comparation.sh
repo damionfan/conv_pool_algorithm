@@ -1,16 +1,19 @@
 #!/bin/bash
 
 cd ouralgorithm
-nvcc ecr.cu 
-./a.out > time_cscc.txt
 
-pwd
+echo "Start ECR Algorithm!"
+nvcc ecr.cu 
+./a.out > time.txt
+
+echo "Finashed ECR Algorithm!"
+
 
 cd ../cudnn
-pwd
+echo "Start CuDNN Algorithm!"
 make
-./cudnn > time_cudnn.txt
-
+./cudnn > time.txt
+echo "Finashed CuDNN Algorithm!"
 cd ..
 
 pwd
