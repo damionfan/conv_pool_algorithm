@@ -2,8 +2,8 @@
 
 cd ouralgorithm
 
-echo "Start ECR Algorithm!"
-nvcc ecr.cu 
+echo "Start PECR Algorithm!"
+nvcc pecr.cu 
 ./a.out > time.txt
 
 echo "Finashed ECR Algorithm!"
