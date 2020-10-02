@@ -1,17 +1,79 @@
+################################################################################
+#
+# Copyright 1993-2015 NVIDIA Corporation.  All rights reserved.
+#
+# NOTICE TO USER:
+#
+# This source code is subject to NVIDIA ownership rights under U.S. and
+# international Copyright laws.
+#
+# NVIDIA MAKES NO REPRESENTATION ABOUT THE SUITABILITY OF THIS SOURCE
+# CODE FOR ANY PURPOSE.  IT IS PROVIDED "AS IS" WITHOUT EXPRESS OR
+# IMPLIED WARRANTY OF ANY KIND.  NVIDIA DISCLAIMS ALL WARRANTIES WITH
+# REGARD TO THIS SOURCE CODE, INCLUDING ALL IMPLIED WARRANTIES OF
+# MERCHANTABILITY, NONINFRINGEMENT, AND FITNESS FOR A PARTICULAR PURPOSE.
+# IN NO EVENT SHALL NVIDIA BE LIABLE FOR ANY SPECIAL, INDIRECT, INCIDENTAL,
+# OR CONSEQUENTIAL DAMAGES, OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS
+# OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE
+# OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE
+# OR PERFORMANCE OF THIS SOURCE CODE.
+#
+# U.S. Government End Users.  This source code is a "commercial item" as
+# that term is defined at 48 C.F.R. 2.101 (OCT 1995), consisting  of
+# "commercial computer software" and "commercial computer software
+# documentation" as such terms are used in 48 C.F.R. 12.212 (SEPT 1995)
+# and is provided to the U.S. Government only as a commercial end item.
+# Consistent with 48 C.F.R.12.212 and 48 C.F.R. 227.7202-1 through
+# 227.7202-4 (JUNE 1995), all U.S. Government End Users acquire the
+# source code with only those rights set forth herein.
+#
+################################################################################
+#
+# Makefile project only supported on Mac OS X and Linux Platforms)
+#
+################################################################################
+
 # Location of the CUDA Toolkit
-CUDA_PATH ?= /usr/local/cuda
+CUDA_PATH ?= "/usr/local/cuda-10.1"
+
+##############################
+# start deprecated interface #
+##############################
+ifeq ($(x86_64),1)
+    $(info WARNING - x86_64 variable has been deprecated)
+    $(info WARNING - please use TARGET_ARCH=x86_64 instead)
+    TARGET_ARCH ?= x86_64
+endif
+ifeq ($(ARMv7),1)
+    $(info WARNING - ARMv7 variable has been deprecated)
+    $(info WARNING - please use TARGET_ARCH=armv7l instead)
+    TARGET_ARCH ?= armv7l
+endif
+ifeq ($(aarch64),1)
+    $(info WARNING - aarch64 variable has been deprecated)
+    $(info WARNING - please use TARGET_ARCH=aarch64 instead)
+    TARGET_ARCH ?= aarch64
+endif
+ifeq ($(ppc64le),1)
+    $(info WARNING - ppc64le variable has been deprecated)
+    $(info WARNING - please use TARGET_ARCH=ppc64le instead)
+    TARGET_ARCH ?= ppc64le
+endif
+ifneq ($(GCC),)
+    $(info WARNING - GCC variable has been deprecated)
+    $(info WARNING - please use HOST_COMPILER=$(GCC) instead)
+    HOST_COMPILER ?= $(GCC)
+endif
+ifneq ($(abi),)
+    $(error ERROR - abi variable has been removed)
+endif
+############################
+# end deprecated interface #
+############################
 
 # architecture
 HOST_ARCH   := $(shell uname -m)
 TARGET_ARCH ?= $(HOST_ARCH)
-
-# Adjust this for ARMv7 with a 32-bit filesystem
-ifeq ($(TARGET_ARCH), aarch64)
-    ifeq ($(shell file /sbin/init | grep 32-bit), 1)
-        TARGET_ARCH=armv7l
-    endif
-endif
-
 ifneq (,$(filter $(TARGET_ARCH),x86_64 aarch64 ppc64le armv7l))
     ifneq ($(TARGET_ARCH),$(HOST_ARCH))
         ifneq (,$(filter $(TARGET_ARCH),x86_64 aarch64 ppc64le))
@@ -31,14 +93,14 @@ ifneq ($(TARGET_ARCH),$(HOST_ARCH))
     endif
 endif
 
+# When on native aarch64 system with userspace of 32-bit, change TARGET_ARCH to armv7l
+ifeq ($(HOST_ARCH)-$(TARGET_ARCH)-$(TARGET_SIZE),aarch64-aarch64-32)
+    TARGET_ARCH = armv7l
+endif
+
 # operating system
 HOST_OS   := $(shell uname -s 2>/dev/null | tr "[:upper:]" "[:lower:]")
 TARGET_OS ?= $(HOST_OS)
-
-ifeq ($(TARGET_OS),QNX)
-override TARGET_OS := qnx
-endif
-
 ifeq (,$(filter $(TARGET_OS),linux darwin qnx android))
     $(error ERROR - unsupported value $(TARGET_OS) for TARGET_OS!)
 endif
@@ -68,8 +130,18 @@ else ifneq ($(TARGET_ARCH),$(HOST_ARCH))
     else ifeq ($(TARGET_ARCH),aarch64)
         ifeq ($(TARGET_OS), linux)
             HOST_COMPILER ?= aarch64-linux-gnu-g++
+        else ifeq ($(TARGET_OS),qnx)
+            ifeq ($(QNX_HOST),)
+                $(error ERROR - QNX_HOST must be passed to the QNX host toolchain)
+            endif
+            ifeq ($(QNX_TARGET),)
+                $(error ERROR - QNX_TARGET must be passed to the QNX target toolchain)
+            endif
+            export QNX_HOST
+            export QNX_TARGET
+            HOST_COMPILER ?= $(QNX_HOST)/usr/bin/aarch64-unknown-nto-qnx7.0.0-g++
         else ifeq ($(TARGET_OS), android)
-            HOST_COMPILER ?= aarch64-linux-android-g++
+            HOST_COMPILER ?= aarch64-linux-android-clang++
         endif
     else ifeq ($(TARGET_ARCH),ppc64le)
         HOST_COMPILER ?= powerpc64le-linux-gnu-g++
@@ -108,6 +180,44 @@ ifneq ($(TARGET_ARCH),$(HOST_ARCH))
             LDFLAGS += -rpath-link=$(TARGET_FS)/usr/lib/arm-linux-gnueabihf
         endif
     endif
+    ifeq ($(TARGET_ARCH)-$(TARGET_OS),aarch64-linux)
+        ifneq ($(TARGET_FS),)
+            GCCVERSIONLTEQ46 := $(shell expr `$(HOST_COMPILER) -dumpversion` \<= 4.6)
+            ifeq ($(GCCVERSIONLTEQ46),1)
+                CCFLAGS += --sysroot=$(TARGET_FS)
+            endif
+            LDFLAGS += --sysroot=$(TARGET_FS)
+            LDFLAGS += -rpath-link=$(TARGET_FS)/lib -L $(TARGET_FS)/lib
+            LDFLAGS += -rpath-link=$(TARGET_FS)/usr/lib -L $(TARGET_FS)/usr/lib
+            LDFLAGS += -rpath-link=$(TARGET_FS)/usr/lib/aarch64-linux-gnu -L $(TARGET_FS)/usr/lib/aarch64-linux-gnu
+            LDFLAGS += --unresolved-symbols=ignore-in-shared-libs
+            CCFLAGS += -isystem=$(TARGET_FS)/usr/include
+            CCFLAGS += -isystem=$(TARGET_FS)/usr/include/aarch64-linux-gnu
+        endif
+    endif
+endif
+
+ifeq ($(TARGET_OS),qnx)
+    CCFLAGS += -DWIN_INTERFACE_CUSTOM
+    LDFLAGS += -lsocket
+endif
+
+# Install directory of different arch
+CUDA_INSTALL_TARGET_DIR :=
+ifeq ($(TARGET_ARCH)-$(TARGET_OS),armv7l-linux)
+    CUDA_INSTALL_TARGET_DIR = targets/armv7-linux-gnueabihf/
+else ifeq ($(TARGET_ARCH)-$(TARGET_OS),aarch64-linux)
+    CUDA_INSTALL_TARGET_DIR = targets/aarch64-linux/
+else ifeq ($(TARGET_ARCH)-$(TARGET_OS),armv7l-android)
+    CUDA_INSTALL_TARGET_DIR = targets/armv7-linux-androideabi/
+else ifeq ($(TARGET_ARCH)-$(TARGET_OS),aarch64-android)
+    CUDA_INSTALL_TARGET_DIR = targets/aarch64-linux-androideabi/
+else ifeq ($(TARGET_ARCH)-$(TARGET_OS),armv7l-qnx)
+    CUDA_INSTALL_TARGET_DIR = targets/ARMv7-linux-QNX/
+else ifeq ($(TARGET_ARCH)-$(TARGET_OS),aarch64-qnx)
+    CUDA_INSTALL_TARGET_DIR = targets/aarch64-qnx/
+else ifeq ($(TARGET_ARCH),ppc64le)
+    CUDA_INSTALL_TARGET_DIR = targets/ppc64le-linux/
 endif
 
 # Debug build flags
@@ -132,29 +242,13 @@ ALL_LDFLAGS += $(addprefix -Xlinker ,$(LDFLAGS))
 ALL_LDFLAGS += $(addprefix -Xlinker ,$(EXTRA_LDFLAGS))
 
 # Common includes and paths for CUDA
-ifdef DVS
-INCLUDES := -I$(CUDA_PATH)/include
-LIBRARIES := -L$(CUDA_PATH)/lib64
-else
-ifneq ($(TARGET_ARCH), ppc64le)
-INCLUDES := -I$(CUDA_PATH)/include
-else
-INCLUDES := -I$(CUDA_PATH)/targets/ppc64le-linux/include
-endif
+INCLUDES  := -I../../common/inc
 LIBRARIES :=
-endif
 
 ################################################################################
 
-ifeq (,$(filter $(MAKECMDGOALS),clean clobber))
-
-# Setting SMS inside samples_common.mk
-include ./samples_common.mk
-
-$(info CUDA VERSION: $(CUDA_VERSION))
-$(info TARGET ARCH: $(TARGET_ARCH))
-$(info TARGET OS: $(TARGET_OS))
-$(info SMS: $(SMS))
+# Gencode arguments
+SMS ?= 30 35 37 50 52 60 61 70 75
 
 ifeq ($(SMS),)
 $(info >>> WARNING - no SM architectures have been specified - waiving sample <<<)
@@ -172,17 +266,10 @@ GENCODE_FLAGS += -gencode arch=compute_$(HIGHEST_SM),code=compute_$(HIGHEST_SM)
 endif
 endif
 
-ifeq ($(CUBLASLT), true)
-LIBRARIES += -lcublasLt
-endif
-
-#INCLUDES += -IFreeImage/include
-LIBRARIES += -lcudart -lcublas -lcudnn -lstdc++ -lm
+LIBRARIES += -lcublas -lcudnn
 
 ifeq ($(SAMPLE_ENABLED),0)
 EXEC ?= @echo "[@]"
-endif
-
 endif
 
 ################################################################################
@@ -199,22 +286,19 @@ else
 	@echo "Sample is ready - all dependencies have been met"
 endif
 
-OBJ = cudnn.o
-
-cudnn: $(OBJ)
-	$(EXEC) $(NVCC) $(ALL_LDFLAGS) $(GENCODE_FLAGS) -o $@ $+ $(INCLUDES) $(LIBRARIES)
-
-%.o: %.cpp
-	$(EXEC) $(HOST_COMPILER) $(INCLUDES) $(CCFLAGS) $(EXTRA_CCFLAGS) -o $@ -c $<
-
-%.o: %.cu
+cudnn.o:cudnn.cu
 	$(EXEC) $(NVCC) $(INCLUDES) $(ALL_CCFLAGS) $(GENCODE_FLAGS) -o $@ -c $<
 
+cudnn: cudnn.o
+	$(EXEC) $(NVCC) $(ALL_LDFLAGS) $(GENCODE_FLAGS) -o $@ $+ $(LIBRARIES)
+	$(EXEC) mkdir -p ../../bin/$(TARGET_ARCH)/$(TARGET_OS)/$(BUILD_TYPE)
+	$(EXEC) cp $@ ../../bin/$(TARGET_ARCH)/$(TARGET_OS)/$(BUILD_TYPE)
+
 run: build
-	$(EXEC) ./cudnn
+	$(EXEC) ./cscc
 
 clean:
-	rm -rf *o
-	rm -rf cudnn
+	rm -f cscc cscc.o
+	rm -rf ../../bin/$(TARGET_ARCH)/$(TARGET_OS)/$(BUILD_TYPE)/cscc
 
 clobber: clean
