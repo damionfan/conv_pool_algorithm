@@ -129,7 +129,11 @@ cudaStatus = cudaMalloc((void**)&gpu_output,op*op*sizeof(float));
 								
 								
 								
-								
+			cudaEvent_t start, stop;
+			float elapsedTime1 = 0.0;
+			cudaEventCreate(&start);
+			cudaEventCreate(&stop);
+			cudaEventRecord(start,0);							
 cudaStatus = cudaMemcpy(gpu_input,feature,arraySize*sizeof(float),cudaMemcpyHostToDevice);
 		if (cudaStatus != cudaSuccess) {
 		fprintf(stderr, "cudaMemcpy failed!%s\n", cudaGetErrorString(cudaStatus));
@@ -141,11 +145,7 @@ cudaStatus = cudaMemcpy(gpu_kernel,kernel,kernelSize*sizeof(float),cudaMemcpyHos
 		}
 float *result = (float*)malloc(op*op*sizeof(float));
 		//time-start
-cudaEvent_t start, stop;
-float elapsedTime1 = 0.0;
-cudaEventCreate(&start);
-cudaEventCreate(&stop);
-cudaEventRecord(start,0);
+
 
 //function-start
 func_pecr<<<op,op>>>(gpu_input,gpu_kernel,i_w,i_h,k_w,k_h,1,1,p_w,p_h,gpu_output);

@@ -159,14 +159,14 @@ int main() {
   // perform
   float alpha = 1.f;
   float beta = 0.f;
-	
+  cudaEvent_t start,stop;
+  float elapsedTime1 = 0.0;
+  cudaEventCreate(&start);
+  cudaEventCreate(&stop);
+  cudaEventRecord(start,0);
 	cudaMemcpy(in_data,feature,arraySize*sizeof(float),cudaMemcpyHostToDevice);
 	cudaMemcpy(filt_data,kernel,9*sizeof(float),cudaMemcpyHostToDevice);
-	cudaEvent_t start,stop;
-	float elapsedTime1 = 0.0;
-	cudaEventCreate(&start);
-	cudaEventCreate(&stop);
-	cudaEventRecord(start,0);
+	
        (cudnnConvolutionForward(
       cudnn,
       &alpha, in_desc, in_data, filt_desc, filt_data,

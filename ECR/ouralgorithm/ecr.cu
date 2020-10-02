@@ -126,7 +126,12 @@ int main(){
 		}
 		
 		
-		
+		//time-start
+		cudaEvent_t start,stop;
+		float elapsedTime1 = 0.0;
+		cudaEventCreate(&start);
+		cudaEventCreate(&stop);
+		cudaEventRecord(start,0);
 		
 		cudaStatus = cudaMemcpy(gpu_input,feature,arraySize*sizeof(float),cudaMemcpyHostToDevice);
 		if (cudaStatus != cudaSuccess) {
@@ -137,12 +142,7 @@ int main(){
 		if (cudaStatus != cudaSuccess) {
 			fprintf(stderr, "cudaMemcpy failed!%s\n", cudaGetErrorString(cudaStatus));
 		}
-			//time-start
-		cudaEvent_t start,stop;
-		float elapsedTime1 = 0.0;
-		cudaEventCreate(&start);
-		cudaEventCreate(&stop);
-		cudaEventRecord(start,0);
+		
 	
 		
 		//function-start

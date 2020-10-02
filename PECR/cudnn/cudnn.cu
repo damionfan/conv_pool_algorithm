@@ -158,16 +158,16 @@ for(int i=0;i<4995;i++){
   float alpha = 1.f;
   float beta = 0.f;
 
-
-
- cudaMemcpy(filt_data,kernel,filt_k * filt_c * filt_h * filt_w *sizeof(float),cudaMemcpyHostToDevice);
- cudaMemcpy(in_data,data,in_n * in_c * in_h * in_w *sizeof(float),cudaMemcpyHostToDevice);
-
 cudaEvent_t start, stop;
 float elapsedTime1 = 0.0;
 cudaEventCreate(&start);
 cudaEventCreate(&stop);
 cudaEventRecord(start,0);
+
+ cudaMemcpy(filt_data,kernel,filt_k * filt_c * filt_h * filt_w *sizeof(float),cudaMemcpyHostToDevice);
+ cudaMemcpy(in_data,data,in_n * in_c * in_h * in_w *sizeof(float),cudaMemcpyHostToDevice);
+
+
   CUDNN_CALL(cudnnConvolutionForward(
       cudnn,
       &alpha, in_desc, in_data, filt_desc, filt_data,
