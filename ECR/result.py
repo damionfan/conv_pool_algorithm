@@ -47,21 +47,21 @@ cudnn_time = time_all(lines)
 
 string = '   ECR :|'
 for i in range(len(ecr_time)):
-    string += str(ecr_time[i])[:3]+'  '
-string += str(sum(ecr_time))[:3]
+    string += str(ecr_time[i]*100)[:3]+'  '
+string += str(sum(ecr_time)*100)[:3]
 print(string)
 
 string = ''
 string = 'CuDNN: |'
 for i in range(len(cudnn_time)):
-    string += str(cudnn_time[i])[:3]+'  '
-string += str(sum(cudnn_time))[:3]
+    string += str(cudnn_time[i]*100)[:3]+'  '
+string += str(sum(cudnn_time)*100)[:3]
 print(string)
 
 string = ''
 string = 'Speedup:|'
 for i in range(len(cudnn_time)):
-    string += str(cudnn_time[i]/ecr_time[i])[:3]+'  '
+    string += str(cudnn_time[i]/ecr_time[i]*100)[:3]+'  '
 
-string += str(sum(cudnn_time)/sum(ecr_time))[:3]
+string += str(sum(cudnn_time)/sum(ecr_time)*100)[:3]
 print(string)
