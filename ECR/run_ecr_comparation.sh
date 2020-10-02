@@ -16,8 +16,7 @@ make
 echo "Finashed CuDNN Algorithm!"
 cd ..
 
-pwd
-
+python3 result.py
 
 
 
