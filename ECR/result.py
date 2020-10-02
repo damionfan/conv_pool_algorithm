@@ -6,7 +6,6 @@
 
 import os
 
-import numpy as np
 
 
 # 0:3:67:131:259:387:643:899:1155:1411:1923:2435:2947:3459:3971:4483
@@ -47,21 +46,22 @@ cudnn_time = time_all(lines)
 
 
 string = '   ECR :|'
-for i in range(ecr_time):
+for i in range(len(ecr_time)):
     string += str(ecr_time[i])+'  '
-
+string += sum(ecr_time)
 print(string)
 
 string = ''
 string = 'CuDNN: |'
-for i in range(cudnn_time):
+for i in range(len(cudnn_time)):
     string += str(cudnn_time[i])+'  '
-
+string += sum(cudnn_time)
 print(string)
 
 string = ''
 string = 'Speedup:|'
-for i in range(cudnn_time):
+for i in range(len(cudnn_time)):
     string += str(cudnn_time[i]/ecr_time[i])+'  '
 
+string += sum(cudnn_time)/sum(ecr_time)
 print(string)

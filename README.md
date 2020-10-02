@@ -16,7 +16,7 @@ If you want to reproduct our experiment, please use same environment. We also th
 
 First you need clone our code in your computer.
 ```
-$ git lone https://github.com/milk2we/conv_pool_algorithm.git
+$ git clone https://github.com/milk2we/conv_pool_algorithm.git
 $ cd conv_pool_algorithm
 $ wget $(Datasets-link)
 $ unzip datasets.zip
